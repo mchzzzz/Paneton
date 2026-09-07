@@ -115,7 +115,13 @@ h1,h2,h3{margin:0;font-weight:600}
 .btn-dec.on{background:var(--petrol);color:#fff;border-color:var(--petrol)}
 .gridbar{display:flex;justify-content:flex-end;padding:8px 10px 0}
 .gridbar .seg button{padding:5px 11px;font-size:11.5px}
+.pycell{white-space:nowrap}
+.pycell .pyval{vertical-align:middle}
 .strongrow td{font-weight:700;background:var(--mist)}
+.idxbadge{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px}
+.idxbadge.ok{background:var(--ok-bg);color:var(--ok)}
+.idxbadge.warn{background:var(--warn-bg);color:var(--warn)}
+.idxbadge.risk{background:var(--risk-bg);color:var(--risk)}
 .vscroll{max-height:470px;overflow-y:auto}
 
 /* ============ LAYOUT ============ */
@@ -313,6 +319,11 @@ svg .dot{fill:#fff;stroke-width:2}
 .da{font-size:9px;margin-left:2px;vertical-align:middle}
 .da.bad{color:var(--risk)}
 .da.good{color:var(--ok)}
+.da.flat{color:var(--ink-3)}
+.didx{display:block;font-size:9px;font-weight:700;margin-top:1px;line-height:1}
+.didx.bad{color:var(--risk)}
+.didx.good{color:var(--ok)}
+.didx.flat{color:var(--ink-3)}
 /* resaltado de celdas en pacing de vendedores */
 .gcell0{background:var(--risk-bg);color:var(--risk);font-weight:600}
 .gcellU{background:var(--warn-bg);color:var(--warn)}
@@ -397,7 +408,7 @@ svg path.spline{stroke:#8894a6;stroke-width:2;fill:none;stroke-linejoin:round}
       <span class="mark">Campaña <b>Panetón</b> 2026</span>
       <span class="sub">Tablero de Seguimiento</span>
     </div>
-    <div class="updated"><span class="dot"></span><span id="updChip">Datos al —</span><span style="margin-left:10px;color:var(--ink-3);font-weight:500">· Actualizado: 07/09/2026 08:57</span></div>
+    <div class="updated"><span class="dot"></span><span id="updChip">Datos al —</span><span style="margin-left:10px;color:var(--ink-3);font-weight:500">· Actualizado: 07/09/2026 11:17</span></div>
   </div>
   <nav class="tabs">
     <button class="tab active" data-tab="ger">Gerencial</button>
@@ -530,7 +541,7 @@ const supDisp={}; (function(){
 })();
 function supLabel(sk){ return supDisp[sk]||(D.sups[sk]&&D.sups[sk].label)||sk; }
 function pyCell(cmp,status){ const bg=status==='ok'?'var(--ok-bg)':status==='warn'?'var(--warn-bg)':status==='risk'?'var(--risk-bg)':'transparent'; const fg=status==='na'?'var(--ink-3)':`var(--${status})`;
-  return `<td data-label="% Py" class="pycell" style="background:${bg};color:${fg}">${pct(cmp)}</td>`; }
+  return `<td data-label="% Py" class="pycell" style="background:${bg};color:${fg}">${sema(status)} <span class="pyval">${pct(cmp)}</span></td>`; }
 function fvRoute(fv){ if(fv==='RUTA Mixta A')return'A'; if(fv==='RUTA Mixta B'||fv==='RUTA Mixta C')return'BC'; return null; }
 function scopeVendors(){
   const rf=F.fv!=='ALL'?fvRoute(F.fv):undefined;
@@ -721,7 +732,7 @@ function dailyTable(which){
   sucList.forEach(s=>{ const codes=sucCodes(s); allCodes=allCodes.concat(codes);
     body+=dailyRow('lvl0 exp',DISP[s],codes,cols,da,fn,vpills(codes),0,which==='E'?'sinvE':'sinvF',s); });
   const promAll=avgDays(fn,allCodes,da);
-  let foot='',prevF=null; cols.forEach(di=>{ const p=fn(allCodes,di); let ar=''; if(p!=null){ if(prevF!=null){const d=(p-prevF)*100; ar=d>0.5?'<span class="da bad">▲</span>':d<-0.5?'<span class="da good">▼</span>':'';} prevF=p; } foot+=`<td data-label="${dates[di].slice(8)}">${p==null?'—':pct(p*100,0)+ar}</td>`; });
+  let foot='',prevF=null; cols.forEach(di=>{ const p=fn(allCodes,di); let ar='',ix=''; if(p!=null){ if(prevF!=null){const d=(p-prevF)*100; const c=d>0.5?'bad':d<-0.5?'good':'flat'; const arw=d>0.5?'▲':d<-0.5?'▼':''; ar=arw?`<span class="da ${c}">${arw}</span>`:''; ix=`<span class="didx ${c}">${d>0?'+':''}${fmt(d,0)}%</span>`;} prevF=p; } foot+=`<td data-label="${dates[di].slice(8)}">${p==null?'—':pct(p*100,0)+ar+ix}</td>`; });
   return `<div class="tbl-scroll"><table class="grid" id="${isE?'tblE':'tblF'}">
       <thead><tr>${head}</tr></thead><tbody>${body}</tbody>
       <tfoot><tr><td data-label="GVD">GVD</td>${foot}<td data-label="Prom.">${promAll==null?'—':pct(promAll*100,0)}</td></tr></tfoot>
@@ -729,10 +740,11 @@ function dailyTable(which){
 }
 function dailyRow(cls,label,codes,cols,da,fn,vpill,depth,type,key){
   let tds='',prev=null;
-  cols.forEach(di=>{ const p=fn(codes,di); const st=statusBad(p,.5,.75); let ar='';
-    if(p!=null){ if(prev!=null){ const d=(p-prev)*100; ar=d>0.5?'<span class="da bad">▲</span>':d<-0.5?'<span class="da good">▼</span>':''; } prev=p; }
-    tds+=`<td data-label="${dates[di].slice(8)}/${dates[di].slice(5,7)}">${p==null?'—':`<span class="heat" style="background:var(--${st}-bg);color:var(--${st})">${fmt(p*100,0)}</span>${ar}`}</td>`; });
-  const prom=avgDays(fn,codes,da); const stp=statusBad(prom,.5,.75);
+  cols.forEach(di=>{ const p=fn(codes,di); const st=statusBad(p,.10,.30); let ar='',ix='';
+    if(p!=null){ if(prev!=null){ const d=(p-prev)*100; const c=d>0.5?'bad':d<-0.5?'good':'flat'; const arw=d>0.5?'▲':d<-0.5?'▼':'';
+      ar=arw?`<span class="da ${c}">${arw}</span>`:''; ix=`<span class="didx ${c}">${d>0?'+':''}${fmt(d,0)}%</span>`; } prev=p; }
+    tds+=`<td data-label="${dates[di].slice(8)}/${dates[di].slice(5,7)}">${p==null?'—':`<span class="heat" style="background:var(--${st}-bg);color:var(--${st})">${fmt(p*100,0)}</span>${ar}${ix}`}</td>`; });
+  const prom=avgDays(fn,codes,da); const stp=statusBad(prom,.10,.30);
   const caret= cls.includes('exp')?'<span class="caret">▶</span>':'';
   const pill= vpill||'';
   const attrs= type!=null?` data-depth="${depth}" data-type="${type}" data-key="${key}"`:` data-depth="${depth}"`;
@@ -878,7 +890,7 @@ function segViewInit(){
     b.onclick=()=>{ segState.view=b.dataset.v; vt.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderSegView(); }; });
   renderSegView();
 }
-const SEG_METRICS=[['sinventa','% Vend. sin venta'],['plandia','% Plan diario'],['venta','Venta diaria']];
+const SEG_METRICS=[['sinventa','% Vend. sin venta'],['plandia','% Plan diario'],['venta','Venta diaria'],['py','% Py']];
 function metricBtns(id){ return `<div class="seg" id="${id}">`+SEG_METRICS.map(([m,l])=>`<button data-m="${m}">${l}</button>`).join('')+`</div>`; }
 function renderSegView(){
   const body=document.getElementById('segViewBody');
@@ -929,9 +941,10 @@ function renderSegView(){
   }
 }
 /* --- grilla "Diario por supervisor": filas = supervisores, columnas = días, valor = métrica --- */
-function segMetricCell(metric,codes,di,day,h){
-  if(metric==='sinventa'){ const p=sinVentaDay(codes,di); if(p==null)return{v:null,txt:'—'}; const st=statusBad(p,.5,.75); return{v:p*100,txt:pct(p*100,0),st}; }
+function segMetricCell(metric,codes,di,day,h,pyh){
+  if(metric==='sinventa'){ const p=sinVentaDay(codes,di); if(p==null)return{v:null,txt:'—'}; const st=statusBad(p,.10,.30); return{v:p*100,txt:pct(p*100,0),st}; }
   if(metric==='plandia'){ const r=h.res[di]; if(!r)return{v:null,txt:'—'}; const st=r.ratio>=100?'ok':r.ratio>=70?'warn':'risk'; return{v:r.ratio,txt:pct(r.ratio,0),st}; }
+  if(metric==='py'){ const v=pyh.res[di]; if(v==null)return{v:null,txt:'—'}; return{v,txt:pct(v,0),st:statusOf(v/100)}; }
   const c=day[di]||0; return{v:c,txt:fmt(c,1),st:null};
 }
 function renderSegDiarioGrid(){
@@ -941,21 +954,22 @@ function renderSegDiarioGrid(){
   const sucList=F.suc==='ALL'?SUCS:[F.suc];
   const sups=Object.keys(D.sups).filter(k=>sucList.includes(D.sups[k].suc)&&(segState.jv==='ALL'||D.sups[k].jv===segState.jv));
   let head='<th>Supervisor</th>'; win.forEach(di=>head+=`<th>${dates[di].slice(8)}/${dates[di].slice(5,7)}</th>`); head+='<th>Prom.</th>';
+  const isVenta=segState.metric==='venta';
   const rowFor=(label,codes,cls)=>{
-    const day=segState.metric==='venta'?sepDailyCajas(codes):null; const h=segState.metric==='plandia'?planDiaHist(codes):null;
+    const day=isVenta?sepDailyCajas(codes):{}; const h=segState.metric==='plandia'?planDiaHist(codes):{res:{}}; const pyh=segState.metric==='py'?pyHist(codes):{res:{}};
     let tds='',acc=[];
-    win.forEach(di=>{ const cell=segMetricCell(segState.metric,codes,di,day||sepDailyCajas(codes),h||{res:{}});
+    win.forEach(di=>{ const cell=segMetricCell(segState.metric,codes,di,day,h,pyh);
       if(cell.v!=null)acc.push(cell.v);
-      const style=cell.st?` style="background:var(--${cell.st}-bg);color:var(--${cell.st})"`:''; const inner=cell.st?`<span class="heat"${style}>${cell.txt}</span>`:cell.txt;
+      const inner=cell.st?`<span class="heat" style="background:var(--${cell.st}-bg);color:var(--${cell.st})">${cell.txt}</span>`:cell.txt;
       tds+=`<td data-label="${dates[di].slice(8)}/${dates[di].slice(5,7)}">${inner}</td>`; });
-    const prom=acc.length?acc.reduce((a,b)=>a+b,0)/acc.length:null; const unit=segState.metric==='venta'?'':'%';
-    return `<tr class="${cls}"><td>${label}${vpills(codes)}</td>${tds}<td class="strong">${prom==null?'—':(segState.metric==='venta'?fmt(prom,1):pct(prom,0))}</td></tr>`;
+    const prom=acc.length?acc.reduce((a,b)=>a+b,0)/acc.length:null;
+    return `<tr class="${cls}"><td>${label}${vpills(codes)}</td>${tds}<td class="strong">${prom==null?'—':(isVenta?fmt(prom,1):pct(prom,0))}</td></tr>`;
   };
   let body=''; sups.forEach(sk=>{ const codes=supCodes(sk); if(codes.length) body+=rowFor(supLabel(sk),codes,'lvl0'); });
   const scopeCodes= segState.jv==='ALL'? scopeVendors() : jvCodes(segState.jv);
   const foot=rowFor(segState.jv==='ALL'?(F.suc==='ALL'?GVDNAME:DISP[F.suc]):D.jvs[segState.jv].label, scopeCodes,'lvl0 strongrow');
   const metL=SEG_METRICS.find(m=>m[0]===segState.metric)[1];
-  wrap.innerHTML=`<div style="font-size:11.5px;color:var(--ink-3);margin:2px 0 6px">${metL} · por supervisor y día${segState.metric==='plandia'?' (plan diario dinámico, con su historia)':''}</div>
+  wrap.innerHTML=`<div style="font-size:11.5px;color:var(--ink-3);margin:2px 0 6px">${metL} · por supervisor y día${segState.metric==='plandia'?' (plan diario dinámico, con su historia)':segState.metric==='py'?' (proyección vs plan, con su historia)':''}</div>
     <div class="tbl-scroll ${sups.length>14?'vscroll':''}"><table class="grid compact" id="tblSegDia"><thead><tr>${head}</tr></thead>
       <tbody>${body||`<tr><td colspan="${win.length+2}" style="text-align:center;color:var(--ink-3)">Sin datos</td></tr>`}</tbody>
       <tfoot>${foot}</tfoot></table></div>`;
@@ -981,6 +995,7 @@ function renderSegAnalytics(){
   let ref=null,unit,pts;
   if(segState.metric==='sinventa'){ pts=win.map(i=>sinVentaDay(codes,i)*100); unit='%'; }
   else if(segState.metric==='plandia'){ pts=win.map(i=> h.res[i]?h.res[i].ratio:0); unit='%'; ref=100; }
+  else if(segState.metric==='py'){ const ph=pyHist(codes); pts=win.map(i=> ph.res[i]!=null?ph.res[i]:0); unit='%'; ref=100; }
   else { pts=win.map(i=>day[i]||0); unit='cajas'; }
   const scopeName= segState.sup!=='ALL'?supLabel(segState.sup) : segState.jv!=='ALL'?D.jvs[segState.jv].label : (F.suc==='ALL'?GVDNAME:DISP[F.suc]);
   drawLines('segChart','segLeg',[{name:scopeName,color:'#a4283a',pts}],win.map(i=>dates[i]),unit,ref,true);
